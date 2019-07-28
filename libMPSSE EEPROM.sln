@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29102.190
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "libMPSSE EEPROM", "libMPSSE EEPROM.pyproj", "{C76F4A36-232D-4AC7-84CA-7272C5BBDF98}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C76F4A36-232D-4AC7-84CA-7272C5BBDF98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C76F4A36-232D-4AC7-84CA-7272C5BBDF98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D1F38933-AB84-4098-A420-833932EE31CE}
+	EndGlobalSection
+EndGlobal
