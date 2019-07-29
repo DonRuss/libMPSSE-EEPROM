@@ -9,6 +9,8 @@
 # Project started from:  http://buildingelectronics.blogspot.com/2017/09/talking-i2c-via-ftdi-ft2232h-with-python.html 
 #
 # Note that the libMPSSE.dll file must be in the project directory and must match your Python implementation.
+#
+# Don Russ 7/29/2019
 
 import struct
 import ctypes
