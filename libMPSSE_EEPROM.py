@@ -1,4 +1,14 @@
 
+# Simple reading and writing to a small EEPROM using the MPSSE library and a FT232 in Python
+#
+# The EEPROM is a 256 byte device located at 0x50 on the bus.  It is
+# AT24C02 – 2-Wire Bus Serial EEPROM (Atmel)
+# 256 bytes / 2 kilobit – 8 bytes / page
+# http://www.atmel.com/devices/AT24C02.aspx
+#
+# Project started from:  http://buildingelectronics.blogspot.com/2017/09/talking-i2c-via-ftdi-ft2232h-with-python.html 
+#
+# Note that the libMPSSE.dll file must be in the project directory and must match your Python implementation.
 
 import struct
 import ctypes
@@ -20,87 +30,54 @@ class I2C_TRANSFER_OPTION(object):
     NO_ADDRESS          = 0x40
 
 
+
+#Create the Python wrapper around the MPSSE library using CTYPES
+libMPSSE            = ctypes.cdll.LoadLibrary("libMPSSE.dll")
+
+# This is one way to create the byte string variable
 values              = [0x03, 0x00]
 raw                 = struct.pack("%dB"%len(values),*values)
 
-libMPSSE            = ctypes.cdll.LoadLibrary("libMPSSE.dll")
+
+#Initialize some of the variables that are used when the MPSSE Library is called
 chn_count           = ctypes.c_int()
-chn_conf            = ChannelConfig(400000,5,0)
-chn_no              = 0
+chn_conf            = ChannelConfig(400000,5,0) # 400kHz 
+chn_no              = 0 #Assume only one device
 handle              = ctypes.c_void_p()
 bytes_transfered    = ctypes.c_int()
 buf                 = ctypes.create_string_buffer(raw,len(raw))
+mode                = I2C_TRANSFER_OPTION.START_BIT|I2C_TRANSFER_OPTION.STOP_BIT|I2C_TRANSFER_OPTION.FAST_TRANSFER_BYTES|I2C_TRANSFER_OPTION.BREAK_ON_NACK # We use fast transfer when we can and break on NACK 
 
-I2Caddress          = 0x38
-mode                = I2C_TRANSFER_OPTION.START_BIT|I2C_TRANSFER_OPTION.STOP_BIT|I2C_TRANSFER_OPTION.FAST_TRANSFER_BYTES|I2C_TRANSFER_OPTION.BREAK_ON_NACK
-
+# Note that with Break on NAK the ctypes.byref(bytes_transfered) may return a number smaller than the number of bytes sent but the transfer may not hang and timeout.
     
-ret = libMPSSE.I2C_GetNumChannels(ctypes.byref(chn_count))
-print("status:",ret,"number of channels:",chn_count)
-ret = libMPSSE.I2C_OpenChannel(chn_no, ctypes.byref(handle))
-print("I2C_OpenChannel status:",ret,"handle:",handle)
-ret = libMPSSE.I2C_InitChannel(handle,ctypes.byref(chn_conf))
+ret = libMPSSE.I2C_GetNumChannels(ctypes.byref(chn_count)) # Used as an example. We assume only one device in the code.
+print("Interface status:",ret,"   Number of channels:",chn_count)
+ret = libMPSSE.I2C_OpenChannel(chn_no, ctypes.byref(handle)) # Here we open the channel and get the handel for that channel
+print("I2C_OpenChannel status:",ret,"   Interface Handle:",hex(ctypes.c_void_p.from_buffer(handle).value) ) # Print the status and the memory location of the libMPSSE routine in HEX
+ret = libMPSSE.I2C_InitChannel(handle,ctypes.byref(chn_conf)) # Configure the FT232 to be I2C at 400kHz
 print("I2C_InitChannel status:",ret)
 
-#values              = [0x03, 0x00]
-#raw                 = struct.pack("%dB"%len(values),*values)
-#buf                 = ctypes.create_string_buffer(raw,len(raw))
 
+I2Caddress = 0x50    # Base address of the EEPROM on the I2C bus
+byte_buf=b'\x00'*16  # Create a byte buffer that is one page long
 
-def byteString( values ):
-    raw                 = struct.pack("%dB"%len(values),*values)
-    buf                 = ctypes.create_string_buffer(raw,len(raw))
-    return buf;
-    
-def flasher():
+# libMPSSE.I2C_DeviceWrite(handle, I2Caddress, Number of Bytes to transfer, Byte String, Number of Bytes Written returned, mode)
 
-    while True:
-        print(".")
-        time.sleep(0.300)
+ret = libMPSSE.I2C_DeviceWrite(handle, I2Caddress, 5, b'\x00\xDE\xAD\xBE\xEF', ctypes.byref(bytes_transfered), mode) # Write some dead cow to the EEPROM at page 0 
 
-        ret = libMPSSE.I2C_DeviceWrite(handle, I2Caddress, 2, b'\x01\x55', ctypes.byref(bytes_transfered), mode)
-
-        time.sleep(0.300)
-        byte_buf = b'\x01\xAA'
-        ret = libMPSSE.I2C_DeviceWrite(handle, I2Caddress, len(byte_buf), byte_buf, ctypes.byref(bytes_transfered), mode)
-
-        byte_buf=b'\x00'
-        ret = libMPSSE.I2C_DeviceWrite(handle, I2Caddress, 1, b'\x01', ctypes.byref(bytes_transfered), mode)
-        ret = libMPSSE.I2C_DeviceRead(handle, I2Caddress, 1, byte_buf, ctypes.byref(bytes_transfered), mode)
-
-        print(byte_buf)
-
-
-        #  ______________________________________________________________________________________________________________________________________________________________________________
-
-
-
-ret = libMPSSE.I2C_DeviceWrite(handle, I2Caddress, len(values), byteString([0x03, 0x00]), ctypes.byref(bytes_transfered), mode)
-
-I2Caddress = 0x50
-byte_buf=b'\x00'*20
-#ret = libMPSSE.I2C_DeviceWrite(handle, I2Caddress, 1, b'\x00', ctypes.byref(bytes_transfered), mode)
-#ret = libMPSSE.I2C_DeviceRead(handle, I2Caddress, 20, byte_buf, ctypes.byref(bytes_transfered), mode)
-
-
-#ret = libMPSSE.I2C_DeviceWrite(handle, I2Caddress, 5, b'\x00\xDE\xAD\xBE\xEF', ctypes.byref(bytes_transfered), mode)
-
-ret = libMPSSE.I2C_DeviceWrite(handle, I2Caddress, 1, b'\x00', ctypes.byref(bytes_transfered), mode)
-ret = libMPSSE.I2C_DeviceRead(handle, I2Caddress, 16, byte_buf, ctypes.byref(bytes_transfered), mode)
+ret = libMPSSE.I2C_DeviceWrite(handle, I2Caddress, 1, b'\x00', ctypes.byref(bytes_transfered), mode)  # Write the page address to the EEPROM
+ret = libMPSSE.I2C_DeviceRead(handle, I2Caddress, 16, byte_buf, ctypes.byref(bytes_transfered), mode) # Read back the page from the EEPROM
 
 hex_out = ""
 
 for b in byte_buf:
     hex_out += "%02X " % b
 
-print ("00: ", hex_out)
 
+print("\n")
+print ("\n   00: ", hex_out,"\n")
 
-try:
-    flasher()
-except KeyboardInterrupt:
-
-    print('\n\nKeyboard exception was received')
-    print("I2C_DeviceWrite status:",ret, "transfered:",bytes_transfered)
-    ret = libMPSSE.I2C_CloseChannel(handle)
-    print("I2C_CloseChannel status:",ret)
+print("I2C_DeviceWrite status:",ret, "Number of Bytes Transfered:",bytes_transfered) # Display the status of the transfer
+ret = libMPSSE.I2C_CloseChannel(handle)
+print("I2C_CloseChannel status:",ret)
+print("\n")
